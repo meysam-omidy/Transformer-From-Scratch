@@ -31,13 +31,13 @@ $ (10, 3, 256)
 ```
 Transformer:
 ```
-d1 = torch.randint(0, 400, (100, 5)) # batch_size=100, num_tokens=5
-d2 = torch.randint(0, 400, (100, 7)) # batch_size=100, num_tokens=7
-transformer = Transformer(num_input_tokens=400, miain_dim=256, ff_dim=512, num_heads=4, num_encoder_layers=10, num_decoder_layers=10)
+d1 = torch.randint(0, 400, (100, 200)) # batch_size=100, num_tokens=200
+d2 = torch.randint(0, 400, (100, 1000)) # batch_size=100, num_tokens=1000
+transformer = Transformer(num_input_tokens=400, miain_dim=256, ff_dim=512, num_heads=4, num_encoder_layers=10, num_decoder_layers=10, num_output_tokens=500, max_tokens=1000)
 transformer(d1,d2).shape
-$ (100, 7, 400)
+$ (100, 1000, 500)
 transformer.sequential_forward(d1, d2, ratio=0.5).shape
-$ (100, 7, 400)
+$ (100, 1000, 500)
 ```
 ## References
 
