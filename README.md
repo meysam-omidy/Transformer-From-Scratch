@@ -1,3 +1,4 @@
+![2024-12-03 12_29_52-Attention Is All You Need pdf and 1 more page - Personal - Microsoft​ Edge](https://github.com/user-attachments/assets/082c3374-8575-46dd-a418-1f9f845de50e)
 
 ## Overview
 This repository contains the implementation of transformer, inspired by the paper "Attention Is All You Need" by Vaswani et al ([link to the paper](https://arxiv.org/abs/1706.03762)). 
