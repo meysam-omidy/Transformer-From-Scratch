@@ -104,8 +104,14 @@ class Transformer(nn.Module):
         self.fc = nn.Linear(main_dim, self.num_output_tokens)
 
     def forward(self, source, target, encoder_mask=None, decoder_mask=None):
-        x = (self.embedding(source) * math.sqrt(self.main_dim)).type(torch.float32)
-        y = (self.embedding(target) * math.sqrt(self.main_dim)).type(torch.float32)
+        if len(source.shape) == 2:
+            x = (self.embedding(source) * math.sqrt(self.main_dim)).type(torch.float32)
+        else:
+            x = source
+        if len(target.shape) == 2:
+            y = (self.embedding(target) * math.sqrt(self.main_dim)).type(torch.float32)
+        else:
+            y = target
         x = x + self.positional_encoding[:x.size(1)]
         y = y + self.positional_encoding[:y.size(1)]
         for module in self.encoder._modules.values():
@@ -115,15 +121,20 @@ class Transformer(nn.Module):
         return self.fc(y)
     
     def sequential_forward(self, source, target, encoder_mask=None, decoder_mask=None, ratio=0.5):
-        x = (self.embedding(source) * math.sqrt(self.main_dim)).type(torch.float32)
+        if len(source.shape) == 2:
+            x = (self.embedding(source) * math.sqrt(self.main_dim)).type(torch.float32)
+        else:
+            x = source
         x = x + self.positional_encoding[:x.size(1)]
         for module in self.encoder._modules.values():
             x = module(x, encoder_mask)
-        tokens = target[:, 0].unsqueeze(1)
+        if len(target.shape) == 2:
+            embeddings = (self.embedding(target[:, 0].unsqueeze(1)) * math.sqrt(self.main_dim)).type(torch.float32)
+        else:
+            embeddings = target[:, 0].unsqueeze(1)
         outputs = torch.zeros(size=(target.size(0), target.size(1), self.num_output_tokens)).to(source.device)
         for t in range(target.shape[1]):
-            y = (self.embedding(tokens) * math.sqrt(self.main_dim)).type(torch.float32)
-            y = y + self.positional_encoding[:y.size(1)]
+            y = embeddings + self.positional_encoding[:embeddings.size(1)]
             for module in self.decoder._modules.values():
                 if decoder_mask != None:
                     y = module(y, x, decoder_mask[:t+1, :t+1])
@@ -131,8 +142,8 @@ class Transformer(nn.Module):
                     y = module(y, x, None)
             y = self.fc(y)
             outputs[:, t, :] = y[:, -1, :].squeeze(1)
-            best_guess = y.argmax(dim=-1)[:, -1].unsqueeze(1)
-            rands = torch.rand(size=(best_guess.size(0), 1)).to(best_guess.device)
-            selected = torch.where(rands > ratio, best_guess, tokens[:, -1].unsqueeze(1))
-            tokens = torch.concatenate((tokens, selected), dim=1)
+            best_guess = (self.embedding(y.argmax(dim=-1)[:, -1].unsqueeze(1)) * math.sqrt(self.main_dim)).type(torch.float32)
+            rands = torch.rand(size=(best_guess.size(0), 1, 1)).to(best_guess.device)
+            selected = torch.where(rands > ratio, best_guess, embeddings[:, -1].unsqueeze(1))
+            embeddings = torch.concatenate((embeddings, selected), dim=1)
         return outputs
