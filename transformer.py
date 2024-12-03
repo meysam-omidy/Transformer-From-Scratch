@@ -89,9 +89,9 @@ class Transformer(nn.Module):
             for i in range(self.max_tokens):
                 for j in range(self.main_dim):
                     if j%2 == 0:
-                        positional_encoding[i,j] = math.sin(i/100**(2*(j//2)/self.main_dim))
+                        positional_encoding[i,j] = torch.sin(torch.tensor(i/100**(2*(j//2)/self.main_dim)))
                     else:
-                        positional_encoding[i,j] = math.cos(i/100**(2*(j//2)/self.main_dim))
+                        positional_encoding[i,j] = torch.cos(torch.tensor(i/100**(2*(j//2)/self.main_dim)))
             self.positional_encoding = nn.Parameter(positional_encoding, requires_grad=False)
         self.embedding = nn.Embedding(num_tokens, main_dim)
         self.encoder = nn.Sequential(
