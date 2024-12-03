@@ -71,10 +71,11 @@ class DecoderLayer(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, num_tokens, main_dim, ff_dim, num_heads, num_encoder_layers, num_decoder_layers, dropout_p=0.2, max_tokens=100, 
-                 trainable_positional_encodings=False) -> None:
+    def __init__(self, num_input_tokens, main_dim, ff_dim, num_heads, num_encoder_layers, num_decoder_layers, num_output_tokens=None, 
+                 dropout_p=0.2, max_tokens=100, trainable_positional_encodings=False) -> None:
         super().__init__()
-        self.num_tokens = num_tokens
+        self.num_input_tokens = num_input_tokens
+        self.num_output_tokens = num_input_tokens if num_output_tokens == None else num_output_tokens
         self.main_dim = main_dim
         self.ff_dim = ff_dim
         self.num_heads = num_heads
@@ -89,18 +90,18 @@ class Transformer(nn.Module):
             for i in range(self.max_tokens):
                 for j in range(self.main_dim):
                     if j%2 == 0:
-                        positional_encoding[i,j] = torch.sin(torch.tensor(i/100**(2*(j//2)/self.main_dim)))
+                        positional_encoding[i,j] = math.sin(i/100**(2*(j//2)/self.main_dim))
                     else:
-                        positional_encoding[i,j] = torch.cos(torch.tensor(i/100**(2*(j//2)/self.main_dim)))
+                        positional_encoding[i,j] = math.cos(i/100**(2*(j//2)/self.main_dim))
             self.positional_encoding = nn.Parameter(positional_encoding, requires_grad=False)
-        self.embedding = nn.Embedding(num_tokens, main_dim)
+        self.embedding = nn.Embedding(num_input_tokens, main_dim)
         self.encoder = nn.Sequential(
             *[EncoderLayer(main_dim, ff_dim, num_heads, dropout_p) for _ in range(num_encoder_layers)]
         )
         self.decoder = nn.Sequential(
             *[DecoderLayer(main_dim, ff_dim, num_heads, dropout_p) for _ in range(num_decoder_layers)]
         )
-        self.fc = nn.Linear(main_dim, num_tokens)
+        self.fc = nn.Linear(main_dim, self.num_output_tokens)
 
     def forward(self, source, target, encoder_mask=None, decoder_mask=None):
         x = (self.embedding(source) * math.sqrt(self.main_dim)).type(torch.float32)
@@ -119,7 +120,7 @@ class Transformer(nn.Module):
         for module in self.encoder._modules.values():
             x = module(x, encoder_mask)
         tokens = target[:, 0].unsqueeze(1)
-        outputs = torch.zeros(size=(target.size(0), target.size(1), self.num_tokens)).to(source.device)
+        outputs = torch.zeros(size=(target.size(0), target.size(1), self.num_output_tokens)).to(source.device)
         for t in range(target.shape[1]):
             y = (self.embedding(tokens) * math.sqrt(self.main_dim)).type(torch.float32)
             y = y + self.positional_encoding[:y.size(1)]
